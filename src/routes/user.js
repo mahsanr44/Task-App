@@ -7,7 +7,8 @@ router.post('/users',async (req,res)=>{
 
     try{
         await user.save()
-        res.status(201).send(user)
+        const token = await user.generateAuthToken()
+        res.status(201).send({user, token})
     } catch(err){
 
         res.status(400).send(err);
@@ -19,8 +20,7 @@ router.post('/users',async (req,res)=>{
 router.get('/users',async (req, res)=>{
     
     try{
-        const users= await User.findOne({
-            name:"Ahsan"
+        const users= await User.find({
         })
         res.send(users);
     }
@@ -57,7 +57,12 @@ router.patch('/user/:id', async (req, res) =>{
     try{
         const _id = req.params.id
         const param=req.body
-        const user = await User.findByIdAndUpdate(_id, param, {new:true, runValidators:true});
+
+        const user = await User.findById(_id)
+
+        updates.forEach((update)=> user[update]= param[update])
+        await user.save()
+        // const user = await User.findByIdAndUpdate(_id, param, {new:true, runValidators:true});
         if(!user){
             return res.status(404).send()
         }
@@ -83,5 +88,19 @@ router.delete('/user/:id', async (req, res)=>{
         res.status(500).send()
     }
 });
+
+// login user
+router.post('/user/login', async (req, res)=>{
+    try{
+        const user = await User.findByCredentials(req.body.username, req.body.password)
+        const token = await user.generateAuthToken()
+
+        res.send({user,token})
+
+    } catch(err){
+        console.log(err);
+        res.status(400).send({error:"User failed to login!",err});
+    }
+})
 
 module.exports = router;
